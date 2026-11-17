@@ -54,7 +54,7 @@ export const useTheme = (): Theme => (useColorScheme() === 'dark' ? dark : light
 export function Screen({ children, scroll = true, title, right }: { children: ReactNode; scroll?: boolean; title?: string; right?: ReactNode }) {
   const c = useTheme();
   const body = (
-    <View style={{ padding: 16, gap: 12 }}>
+    <View style={{ padding: 16, gap: 12, ...(scroll ? {} : { flex: 1 }) }}>
       {title && (
         <View style={styles.row}>
           <Text style={[styles.h1, { color: c.text, flex: 1 }]} accessibilityRole="header">{title}</Text>

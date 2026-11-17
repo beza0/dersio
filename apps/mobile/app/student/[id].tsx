@@ -100,6 +100,15 @@ function Notes({ id, active }: { id: string; active: boolean }) {
 function Links({ student }: { student: StudentDto }) {
   const [created, setCreated] = useState<InviteDto | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [accessUrl, setAccessUrl] = useState<string | null>(null);
+  const makeAccess = async () => {
+    setErr(null);
+    try {
+      setAccessUrl((await api.post<{ url: string }>(`/students/${student.id}/guardian-access-links`, { canRequestChanges: false })).url);
+    } catch (e) {
+      setErr(errorMessage(e));
+    }
+  };
   const make = async (kind: 'student' | 'guardian') => {
     setErr(null);
     try {
@@ -112,8 +121,15 @@ function Links({ student }: { student: StudentDto }) {
     <Card>
       <T muted>Davet kodunu kendiniz paylaşın; uygulama otomatik mesaj göndermez. Kod 7 gün geçerli ve tek kullanımlıktır.</T>
       {!student.hasAccount && <Button title="Öğrenci daveti oluştur" onPress={() => make('student')} disabled={student.status !== 'active'} />}
-      <Button title="Veli daveti oluştur" onPress={() => make('guardian')} disabled={student.status !== 'active'} />
+      <Button kind="primary" title="Veli bağlantısı (giriş gerekmez)" onPress={makeAccess} disabled={student.status !== 'active'} />
+      <Button title="Hesaplı veli daveti oluştur" onPress={() => make('guardian')} disabled={student.status !== 'active'} />
       {err && <Alert tone="danger">{err}</Alert>}
+      {accessUrl && (
+        <>
+          <Alert tone="ok">Veli bu bağlantıyı açınca hesap açmadan dersleri, ödevleri ve velilerle paylaşılan notları görür. Bağlantı süresizdir; Veliler listesinden kaldırınca erişim biter. Bağlantı yalnızca şimdi gösterilir.</Alert>
+          <Button kind="primary" title="Veli bağlantısını paylaş" onPress={() => Share.share({ message: `${student.displayName} için Dersio veli bağlantısı: ${accessUrl}` })} />
+        </>
+      )}
       {created && (
         <>
           <Alert tone="ok">Kod: {created.code}</Alert>

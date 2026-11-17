@@ -89,6 +89,16 @@ export class StudentsController {
     await this.students.updateGuardian(await this.access.teacher(u.id), id, linkId, body.canRequestChanges);
   }
 
+  /** Giriş gerektirmeyen veli bağlantısı üretir (yalnızca bir kez gösterilir). */
+  @Post(':id/guardian-access-links')
+  async guardianAccessLink(
+    @CurrentUser() u: AuthUser,
+    @Param('id', Uuid) id: string,
+    @Body(new Zod(z.object({ canRequestChanges: z.boolean().default(false) }))) body: { canRequestChanges: boolean },
+  ) {
+    return this.students.createGuardianAccessLink(await this.access.teacher(u.id), id, body.canRequestChanges);
+  }
+
   @Delete(':id/guardians/:linkId')
   @HttpCode(204)
   async removeGuardian(@CurrentUser() u: AuthUser, @Param('id', Uuid) id: string, @Param('linkId', Uuid) linkId: string) {

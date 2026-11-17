@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { ScrollView, View, type ScrollViewInstance } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ExpoSpeechRecognitionModule, useSpeechRecognitionEvent } from 'expo-speech-recognition';
 import { AI_EXAMPLES, RULES_EXAMPLES, RULES_NOTE, type AiActionDto, type AiReplyDto, type AiStatusDto } from '@derslik/shared';
@@ -35,6 +35,7 @@ export default function Assistant() {
   const [micError, setMicError] = useState<string | null>(null);
   const [conversationId, setConversationId] = useState<string>();
   const base = useRef('');
+  const scroller = useRef<ScrollViewInstance>(null);
   const status = useQuery({ queryKey: ['ai-status'], queryFn: () => api.get<AiStatusDto>('/ai/status'), staleTime: 5 * 60_000 });
   const rules = status.data?.mode === 'rules';
 
@@ -92,7 +93,7 @@ export default function Assistant() {
     <Screen title="Asistan" scroll={false}>
       <T muted size={13}>Takvimi, notları ve ödevleri değiştiren her işlem önce önizleme olarak sunulur.</T>
       {rules && <T muted size={13}>{RULES_NOTE}</T>}
-      <ScrollView style={{ maxHeight: 420 }} contentContainerStyle={{ gap: 10 }}>
+      <ScrollView ref={scroller} style={{ flex: 1 }} contentContainerStyle={{ gap: 10, paddingBottom: 8 }} keyboardShouldPersistTaps="handled" onContentSizeChange={() => scroller.current?.scrollToEnd({ animated: true })}>
         {turns.length === 0 && (
           <Card>
             <T bold>Örnek komutlar</T>

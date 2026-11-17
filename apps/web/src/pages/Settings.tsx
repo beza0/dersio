@@ -34,8 +34,12 @@ export function Settings() {
       <div className="grid grid-2">
         <form className="card stack" onSubmit={(e) => { e.preventDefault(); save.mutate(); }}>
           <h2>Hesap</h2>
-          <div className="small muted">{me!.user.email} {me!.user.emailVerified ? <StatusBadge tone="ok">Doğrulandı</StatusBadge> : <StatusBadge tone="warn">Doğrulanmadı</StatusBadge>}</div>
-          {!me!.user.emailVerified && <button type="button" className="btn sm" style={{ alignSelf: 'flex-start' }} onClick={async () => { await api.post('/auth/resend-verification'); toast('Doğrulama e-postası gönderildi'); }}>Doğrulama e-postasını tekrar gönder</button>}
+          {me!.user.isGuest ? (
+            <div className="small muted">Öğretmenin gönderdiği veli bağlantısıyla, hesap açmadan görüntülüyorsunuz.</div>
+          ) : (
+            <div className="small muted">{me!.user.email} {me!.user.emailVerified ? <StatusBadge tone="ok">Doğrulandı</StatusBadge> : <StatusBadge tone="warn">Doğrulanmadı</StatusBadge>}</div>
+          )}
+          {!me!.user.emailVerified && !me!.user.isGuest && <button type="button" className="btn sm" style={{ alignSelf: 'flex-start' }} onClick={async () => { await api.post('/auth/resend-verification'); toast('Doğrulama e-postası gönderildi'); }}>Doğrulama e-postasını tekrar gönder</button>}
           <Field label="Ad" htmlFor="sn"><input id="sn" className="input" value={name} onChange={(e) => setName(e.target.value)} /></Field>
           {me!.contexts.teacher && <Field label="Saat dilimi" hint="Ders saatleri bu saat diliminde gösterilir" htmlFor="stz"><input id="stz" className="input" value={timezone} onChange={(e) => setTimezone(e.target.value)} /></Field>}
           <button className="btn primary" style={{ alignSelf: 'flex-start' }}>Kaydet</button>

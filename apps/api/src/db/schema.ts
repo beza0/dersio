@@ -30,6 +30,8 @@ export const appUser = pgTable('app_user', {
   name: text('name').notNull(),
   timezone: text('timezone').notNull().default('Europe/Istanbul'),
   isAdmin: boolean('is_admin').notNull().default(false),
+  /** Veli bağlantısıyla oluşturulan, e-postası/parolası olmayan hesap. */
+  isGuest: boolean('is_guest').notNull().default(false),
   status: text('status').$type<'active' | 'suspended' | 'deleted'>().notNull().default('active'),
   createdAt: createdAt(),
   updatedAt: ts('updated_at').notNull().defaultNow(),
@@ -153,6 +155,8 @@ export const guardianLink = pgTable('guardian_link', {
   workspaceId: uuid('workspace_id').notNull(),
   userId: uuid('user_id').notNull(),
   canRequestChanges: boolean('can_request_changes').notNull().default(false),
+  /** Giriş gerektirmeyen veli bağlantısının token özeti (yalnızca misafir veli hesaplarında). */
+  accessTokenHash: text('access_token_hash'),
   createdAt: createdAt(),
 });
 

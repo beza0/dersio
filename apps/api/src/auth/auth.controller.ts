@@ -85,6 +85,14 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle(STRICT)
+  @HttpCode(200)
+  @Post('guardian-access')
+  async guardianAccess(@Body(new Zod(z.object({ token: z.string().min(20).max(200) }))) body: { token: string }, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    return this.respond(req, res, await this.auth.guardianAccess(body.token, clientOf(req)));
+  }
+
+  @Public()
   @HttpCode(204)
   @Post('logout')
   async logout(@Body(new Zod(RefreshInput)) body: z.infer<typeof RefreshInput>, @Req() req: Request & { user?: AuthUser }, @Res({ passthrough: true }) res: Response) {

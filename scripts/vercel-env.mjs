@@ -22,12 +22,14 @@ const config = {
   ALLOW_SANDBOX_IN_PRODUCTION: 'true',
   STORAGE_DRIVER: 'db',
   UPLOAD_MAX_BYTES: '4000000',
-  MAIL_MODE: 'console',
+  MAIL_MODE: secrets.SMTP_PASS ? 'smtp' : 'console', // Gmail uygulama şifresi girilince gerçek e-posta
   APP_URL: 'https://dersio-app.vercel.app',
   API_PUBLIC_URL: 'https://dersio-app.vercel.app',
   CORS_ORIGINS: 'https://dersio-app.vercel.app',
 };
-const all = { ...config, ...secrets };
+for (const k of Object.keys(secrets)) if (secrets[k] === '') delete secrets[k];
+const only = process.argv.find((a) => a.startsWith('--only='))?.slice(7).split(',');
+const all = Object.fromEntries(Object.entries({ ...config, ...secrets }).filter(([k]) => !only || only.includes(k)));
 for (const [name, value] of Object.entries(all)) {
   spawnSync('npx', ['vercel', 'env', 'rm', name, 'production', '--yes'], { stdio: 'ignore', shell: true });
   const r = spawnSync('npx', ['vercel', 'env', 'add', name, 'production'], { input: value, stdio: ['pipe', 'ignore', 'inherit'], shell: true });

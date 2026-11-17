@@ -31,7 +31,13 @@ const Env = z
     API_PUBLIC_URL: z.string().default('http://localhost:3000'),
     /** Zamanlanmış işleri (hatırlatmalar) tetikleyen dış çağrının sırrı. */
     CRON_SECRET: z.string().min(16).optional(),
-    MAIL_MODE: z.enum(['console', 'file']).default('console'),
+    MAIL_MODE: z.enum(['console', 'file', 'smtp']).default('console'),
+    /** Gmail için: smtp.gmail.com, 465, Gmail adresi ve 16 haneli uygulama şifresi. */
+    SMTP_HOST: z.string().default('smtp.gmail.com'),
+    SMTP_PORT: z.coerce.number().int().default(465),
+    SMTP_USER: z.string().optional(),
+    SMTP_PASS: z.string().optional(),
+    MAIL_FROM: z.string().optional(),
     COOKIE_SECURE: z
       .enum(['true', 'false'])
       .default('false')
@@ -51,6 +57,9 @@ const Env = z
     }
     if (env.STORAGE_DRIVER === 'supabase' && (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY)) {
       ctx.addIssue({ code: 'custom', message: 'Supabase depolama için SUPABASE_URL ve SUPABASE_SERVICE_ROLE_KEY gerekli', path: ['STORAGE_DRIVER'] });
+    }
+    if (env.MAIL_MODE === 'smtp' && (!env.SMTP_USER || !env.SMTP_PASS)) {
+      ctx.addIssue({ code: 'custom', message: 'MAIL_MODE=smtp için SMTP_USER ve SMTP_PASS gerekli', path: ['MAIL_MODE'] });
     }
     if (env.AI_PROVIDER === 'anthropic' && !env.ANTHROPIC_API_KEY) {
       ctx.addIssue({ code: 'custom', message: 'ANTHROPIC_API_KEY gerekli', path: ['ANTHROPIC_API_KEY'] });

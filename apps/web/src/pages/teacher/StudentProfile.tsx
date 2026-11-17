@@ -350,8 +350,17 @@ function LinksTab({ student }: { student: StudentDto }) {
   const qc = useQueryClient();
   const toast = useToast();
   const invites = useQuery({ queryKey: ['invites', student.id], queryFn: () => api.get<InviteDto[]>(`/students/${student.id}/invites`) });
-  const guardians = useQuery({ queryKey: ['guardians', student.id], queryFn: () => api.get<{ id: string; name: string; canRequestChanges: boolean }[]>(`/students/${student.id}/guardians`) });
+  const guardians = useQuery({ queryKey: ['guardians', student.id], queryFn: () => api.get<{ id: string; name: string; canRequestChanges: boolean; viaLink: boolean }[]>(`/students/${student.id}/guardians`) });
   const [created, setCreated] = useState<InviteDto | null>(null);
+  const [accessLink, setAccessLink] = useState<string | null>(null);
+  const makeAccessLink = useMutation({
+    mutationFn: () => api.post<{ linkId: string; url: string }>(`/students/${student.id}/guardian-access-links`, { canRequestChanges: false }),
+    onSuccess: (r) => {
+      setAccessLink(r.url);
+      void qc.invalidateQueries({ queryKey: ['guardians', student.id] });
+    },
+    onError: (e) => toast(errorMessage(e)),
+  });
   const create = useMutation({
     mutationFn: (x: { kind: 'student' | 'guardian'; canRequestChanges?: boolean }) => api.post<InviteDto>(`/students/${student.id}/invites`, { ttlDays: 7, ...x }),
     onSuccess: (i) => {
@@ -387,16 +396,17 @@ function LinksTab({ student }: { student: StudentDto }) {
         <div className="row between">
           <h2>Veliler</h2>
           <div className="row">
-            <button className="btn sm" onClick={() => create.mutate({ kind: 'guardian', canRequestChanges: false })} disabled={student.status !== 'active'}>Veli daveti</button>
-            <button className="btn sm" onClick={() => create.mutate({ kind: 'guardian', canRequestChanges: true })} disabled={student.status !== 'active'}>Talep izinli veli daveti</button>
+            <button className="btn sm primary" onClick={() => makeAccessLink.mutate()} disabled={student.status !== 'active' || makeAccessLink.isPending}>Veli bağlantısı (giriş gerekmez)</button>
+            <button className="btn sm" onClick={() => create.mutate({ kind: 'guardian', canRequestChanges: false })} disabled={student.status !== 'active'}>Hesaplı veli daveti</button>
           </div>
         </div>
+        <span className="muted small">Veli bağlantısını açan kişi hesap açmadan dersleri, ödevleri ve velilerle paylaştığınız notları görür. Bağlantıyı kaldırınca erişim hemen biter.</span>
         <Q q={guardians} empty={(d) => d.length === 0 && <span className="muted small">Bağlı veli yok.</span>}>
           {(d) => (
             <div className="list">
               {d.map((g) => (
                 <div key={g.id} className="list-item">
-                  <div className="grow title">{g.name}</div>
+                  <div className="grow title">{g.name} {g.viaLink && <StatusBadge>Bağlantı ile, girişsiz</StatusBadge>}</div>
                   <label className="row small">
                     <input type="checkbox" checked={g.canRequestChanges} onChange={async (e) => { await api.patch(`/students/${student.id}/guardians/${g.id}`, { canRequestChanges: e.target.checked }); refresh(); }} />
                     İptal/erteleme talebi gönderebilir
@@ -429,6 +439,15 @@ function LinksTab({ student }: { student: StudentDto }) {
           )}
         </Q>
       </div>
+      {accessLink && (
+        <Modal title="Veli bağlantısı hazır" onClose={() => setAccessLink(null)}>
+          <div className="stack">
+            <p style={{ margin: 0 }}>Bu bağlantıyı veliye gönderin (WhatsApp, SMS…). Veli bağlantıyı açınca hesap açmadan veya giriş yapmadan çocuğunun derslerini, ödevlerini ve velilerle paylaştığınız notları görür. Bağlantı süresizdir; erişimi bitirmek için Veliler listesinden kaldırın. Güvenliğiniz için bu pencere kapandıktan sonra bağlantı tekrar gösterilmez.</p>
+            <Field label="Bağlantı"><input className="input" readOnly value={accessLink} onFocus={(e) => e.target.select()} /></Field>
+            <button className="btn primary" onClick={async () => { await navigator.clipboard.writeText(`${student.displayName} için Dersio veli bağlantısı: ${accessLink}`); toast('Bağlantı kopyalandı'); }}><Copy size={16} /> Bağlantıyı kopyala</button>
+          </div>
+        </Modal>
+      )}
       {created && (
         <Modal title="Davet oluşturuldu" onClose={() => setCreated(null)}>
           <div className="stack">

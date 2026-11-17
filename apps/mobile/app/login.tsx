@@ -32,8 +32,15 @@ export default function Login() {
         {err && <Alert tone="danger">{err}</Alert>}
         <Button kind="primary" title={busy ? 'Giriş yapılıyor…' : 'Giriş yap'} onPress={submit} disabled={busy || !email || !password} />
       </Card>
-      <Button title="Öğretmen olarak ücretsiz hesap aç" onPress={() => router.push('/register')} />
-      <Button title="Davet kodum var" onPress={() => router.push('/invite')} />
+      <Card>
+        <T bold size={16}>Öğretmen misiniz?</T>
+        <Button title="Ücretsiz öğretmen hesabı açın" onPress={() => router.push('/register')} />
+      </Card>
+      <Card>
+        <T bold size={16}>Davet kodunuz mu var?</T>
+        <T muted size={13}>Öğrenci veya veli olarak öğretmeninizin gönderdiği daveti kabul edin.</T>
+        <Button title="Daveti kabul edin" onPress={() => router.push('/invite')} />
+      </Card>
     </Screen>
   );
 }

@@ -22,8 +22,6 @@ import { EntitlementsService } from '../billing/entitlements.service';
 
 const REFRESH_TTL_MS = 30 * 24 * 3600 * 1000;
 const ARGON = { memoryCost: 19456, timeCost: 2, parallelism: 1 } as const; // OWASP önerisi (argon2id)
-// Kullanıcı yokken de doğrulama süresini eşitlemek için sabit bir hash.
-let dummyHash: Promise<string> | null = null;
 
 export interface IssuedSession {
   accessToken: string;
@@ -74,19 +72,27 @@ export class AuthService {
 
   async login(email: string, password: string, client: 'web' | 'mobile'): Promise<IssuedSession> {
     const [u] = await this.db
-      .select({ id: appUser.id, hash: appUser.passwordHash, status: appUser.status })
+      .select({ id: appUser.id, hash: appUser.passwordHash, status: appUser.status, guest: appUser.isGuest })
       .from(appUser)
       .where(sql`lower(${appUser.email}) = lower(${email.trim()})`)
       .limit(1);
-    if (!u) {
-      dummyHash ??= hash('timing-equalizer-password', ARGON);
-      await verify(await dummyHash, password).catch(() => false);
-      throw new AppError(ErrorCode.INVALID_CREDENTIALS, 'E-posta veya parola hatalı');
-    }
+    // Ürün kararı: kullanıcıya hangi alanın yanlış olduğu ayrı söylenir (sıkı istek sınırı ile birlikte).
+    if (!u || u.guest) throw new AppError(ErrorCode.INVALID_CREDENTIALS, 'Bu e-posta adresiyle kayıtlı bir hesap yok');
     const ok = await verify(u.hash, password).catch(() => false);
-    if (!ok) throw new AppError(ErrorCode.INVALID_CREDENTIALS, 'E-posta veya parola hatalı');
+    if (!ok) throw new AppError(ErrorCode.INVALID_CREDENTIALS, 'Parola yanlış. Parolanızı unuttuysanız “Parolamı unuttum” bağlantısını kullanın.');
     if (u.status !== 'active') throw new AppError(ErrorCode.FORBIDDEN, 'Hesap kullanıma kapalı');
     return this.issue(u.id, client);
+  }
+
+  /** Giriş gerektirmeyen veli bağlantısı: token geçerliyse misafir veli hesabına oturum açar. */
+  async guardianAccess(token: string, client: 'web' | 'mobile'): Promise<IssuedSession> {
+    const [row] = await this.db
+      .select({ userId: guardianLink.userId, status: appUser.status })
+      .from(guardianLink)
+      .innerJoin(appUser, eq(appUser.id, guardianLink.userId))
+      .where(and(eq(guardianLink.accessTokenHash, sha256(token)), eq(appUser.isGuest, true)));
+    if (!row || row.status !== 'active') throw new AppError(ErrorCode.TOKEN_INVALID, 'Bu veli bağlantısı geçersiz veya öğretmen tarafından kaldırılmış');
+    return this.issue(row.userId, client);
   }
 
   private async issue(userId: string, client: 'web' | 'mobile', tx: Db | Parameters<Parameters<Db['transaction']>[0]>[0] = this.db): Promise<IssuedSession> {
@@ -195,13 +201,18 @@ export class AuthService {
     const [u] = await this.db
       .select({ id: appUser.id, email: appUser.email })
       .from(appUser)
-      .where(sql`lower(${appUser.email}) = lower(${email.trim()})`);
+      .where(and(sql`lower(${appUser.email}) = lower(${email.trim()})`, eq(appUser.isGuest, false)));
     if (!u) return;
     const token = await this.createEmailToken(u.id, 'reset_password', 3600 * 1000);
     await this.mail.send({
       to: u.email,
       subject: 'Parola sıfırlama',
-      text: `Parolanızı sıfırlamak için (1 saat geçerli): ${this.config.APP_URL}/reset-password?token=${token}`,
+      text: `Merhaba,
+
+Parolanızı sıfırlamak için aşağıdaki bağlantıyı açın (1 saat geçerli):
+${this.config.APP_URL}/reset-password?token=${token}
+
+Bu isteği siz yapmadıysanız bu e-postayı yok sayabilirsiniz.`,
     });
   }
 
@@ -236,7 +247,7 @@ export class AuthService {
       .innerJoin(workspace, eq(workspace.id, guardianLink.workspaceId))
       .where(eq(guardianLink.userId, userId));
     return {
-      user: { id: u.id, email: u.email, name: u.name, emailVerified: Boolean(u.emailVerifiedAt), isAdmin: u.isAdmin },
+      user: { id: u.id, email: u.isGuest ? '' : u.email, name: u.name, emailVerified: Boolean(u.emailVerifiedAt), isAdmin: u.isAdmin, isGuest: u.isGuest },
       contexts: {
         teacher: ws ? { workspaceId: ws.id, timezone: ws.timezone } : null,
         studentLinks,

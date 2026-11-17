@@ -33,7 +33,8 @@ export const UpdateProfileInput = z.object({
 });
 
 export interface MeResponse {
-  user: { id: string; email: string; name: string; emailVerified: boolean; isAdmin: boolean };
+  /** `isGuest`: giriş gerektirmeyen veli bağlantısıyla açılmış hesap (e-postası/parolası yok). */
+  user: { id: string; email: string; name: string; emailVerified: boolean; isAdmin: boolean; isGuest: boolean };
   contexts: {
     teacher: { workspaceId: string; timezone: string } | null;
     studentLinks: { studentId: string; workspaceId: string; teacherName: string }[];

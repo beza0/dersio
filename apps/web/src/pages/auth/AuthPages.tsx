@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import { BRAND } from '@derslik/shared';
 import { api, errorMessage } from '../../api';
 import { useAuth } from '../../auth';
@@ -48,11 +48,6 @@ export function Login() {
   return (
     <AuthCard
       title="Giriş yap"
-      footer={
-        <>
-          Öğretmen misiniz? <Link to="/register">Ücretsiz hesap açın</Link> · Davet kodunuz mu var? <Link to="/invite">Daveti kabul edin</Link>
-        </>
-      }
     >
       <form className="stack" onSubmit={submit}>
         <Field label="E-posta" htmlFor="email">
@@ -65,6 +60,16 @@ export function Login() {
         <button className="btn primary" disabled={busy}>{busy ? 'Giriş yapılıyor…' : 'Giriş yap'}</button>
         <Link to="/forgot-password" className="small">Parolamı unuttum</Link>
       </form>
+      <div className="auth-choices">
+        <Link to="/register" className="auth-choice">
+          <strong>Öğretmen misiniz?</strong>
+          <span>Ücretsiz öğretmen hesabı açın →</span>
+        </Link>
+        <Link to="/invite" className="auth-choice">
+          <strong>Davet kodunuz mu var?</strong>
+          <span>Öğrenci veya veli olarak daveti kabul edin →</span>
+        </Link>
+      </div>
     </AuthCard>
   );
 }
@@ -141,6 +146,28 @@ export function Register() {
         <button className="btn primary" disabled={busy}>{busy ? 'Hesap açılıyor…' : 'Ücretsiz başla'}</button>
         <p className="small muted" style={{ margin: 0 }}>Ücretsiz planda 1 aktif öğrenci ve sınırlı AI kullanımı vardır. Kart bilgisi istenmez.</p>
       </form>
+    </AuthCard>
+  );
+}
+
+/** Giriş gerektirmeyen veli bağlantısı: /v/:token */
+export function GuardianAccess() {
+  const { token } = useParams();
+  const { reload } = useAuth();
+  const nav = useNavigate();
+  const [err, setErr] = useState<string | null>(null);
+  useEffect(() => {
+    api
+      .guardianAccess(token ?? '')
+      .then(async () => {
+        await reload();
+        nav('/', { replace: true });
+      })
+      .catch((x) => setErr(errorMessage(x)));
+  }, [token]);
+  return (
+    <AuthCard title="Veli görünümü">
+      {err ? <div className="alert danger">{err} Öğretmenden yeni bir bağlantı isteyin.</div> : <p>Açılıyor…</p>}
     </AuthCard>
   );
 }

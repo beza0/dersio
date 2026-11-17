@@ -107,7 +107,7 @@ export function Assistant() {
   };
 
   return (
-    <>
+    <div className="assistant-page">
       <PageHeader title="Asistan" subtitle="Takvimi, notları ve ödevleri değiştiren her işlem önce size önizleme olarak sunulur." />
       {rules && <div className="card small muted" style={{ marginBottom: 12 }}>{RULES_NOTE} Ne anladığını görmek için “yardım” yazın.</div>}
       <div className="chat" aria-live="polite">
@@ -181,6 +181,6 @@ export function Assistant() {
           <button className="btn primary" disabled={busy || !text.trim()}><Send size={16} /> Gönder</button>
         </div>
       </form>
-    </>
+    </div>
   );
 }

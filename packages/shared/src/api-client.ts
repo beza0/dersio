@@ -113,6 +113,10 @@ export function createApiClient(opts: ApiClientOptions) {
     async login(email: string, password: string) {
       await applyTokens(await parse<AuthTokens>(await raw('POST', '/auth/login', { email, password })));
     },
+    /** Giriş gerektirmeyen veli bağlantısı ile oturum açar. */
+    async guardianAccess(token: string) {
+      await applyTokens(await parse<AuthTokens>(await raw('POST', '/auth/guardian-access', { token })));
+    },
     async register(input: { email: string; password: string; name: string; role: 'teacher' | 'member'; timezone?: string }) {
       await applyTokens(await parse<AuthTokens>(await raw('POST', '/auth/register', input)));
     },

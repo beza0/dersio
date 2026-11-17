@@ -15,6 +15,7 @@ import {
   groupMembership,
   guardianLink,
   lesson,
+  session,
   student,
   studentAccountLink,
   studentGroup,
@@ -22,6 +23,8 @@ import {
 import { AccessService, type TeacherCtx } from '../common/access.service';
 import { AppError, notFound } from '../common/errors';
 import { EntitlementsService } from '../billing/entitlements.service';
+import { randomToken, sha256 } from '../common/crypto';
+import { CONFIG, type AppConfig } from '../config';
 
 type StudentRow = typeof student.$inferSelect;
 
@@ -31,6 +34,7 @@ export class StudentsService {
     @Inject(DB) private readonly db: Db,
     private readonly access: AccessService,
     private readonly entitlements: EntitlementsService,
+    @Inject(CONFIG) private readonly config: AppConfig,
   ) {}
 
   private async toDtos(rows: StudentRow[], tx: Tx = this.db): Promise<StudentDto[]> {
@@ -181,7 +185,7 @@ export class StudentsService {
   async listGuardians(t: TeacherCtx, studentId: string) {
     await this.access.ownStudent(t, studentId);
     return this.db
-      .select({ id: guardianLink.id, name: appUser.name, canRequestChanges: guardianLink.canRequestChanges, createdAt: guardianLink.createdAt })
+      .select({ id: guardianLink.id, name: appUser.name, canRequestChanges: guardianLink.canRequestChanges, createdAt: guardianLink.createdAt, viaLink: appUser.isGuest })
       .from(guardianLink)
       .innerJoin(appUser, eq(appUser.id, guardianLink.userId))
       .where(eq(guardianLink.studentId, studentId));
@@ -199,9 +203,45 @@ export class StudentsService {
 
   async removeGuardian(t: TeacherCtx, studentId: string, linkId: string) {
     await this.access.ownStudent(t, studentId);
-    await this.db
-      .delete(guardianLink)
-      .where(and(eq(guardianLink.id, linkId), eq(guardianLink.studentId, studentId), eq(guardianLink.workspaceId, t.workspaceId)));
+    await this.db.transaction(async (tx) => {
+      const [row] = await tx
+        .delete(guardianLink)
+        .where(and(eq(guardianLink.id, linkId), eq(guardianLink.studentId, studentId), eq(guardianLink.workspaceId, t.workspaceId)))
+        .returning({ userId: guardianLink.userId, token: guardianLink.accessTokenHash });
+      // Bağlantı ile açılan misafir veli hesabı yalnızca bu bağlantı için vardı: kapatılır ve oturumları sonlanır.
+      if (row?.token) {
+        await tx.update(appUser).set({ status: 'deleted', updatedAt: new Date() }).where(and(eq(appUser.id, row.userId), eq(appUser.isGuest, true)));
+        await tx.update(session).set({ revokedAt: new Date() }).where(and(eq(session.userId, row.userId), isNull(session.revokedAt)));
+      }
+    });
+  }
+
+  /**
+   * Giriş gerektirmeyen veli bağlantısı. Bağlantıyı açan kişi e-postasız misafir veli hesabıyla oturum alır;
+   * öğretmen bağlantıyı "Veliler" listesinden kaldırınca erişim biter. Token yalnızca bir kez gösterilir.
+   */
+  async createGuardianAccessLink(t: TeacherCtx, studentId: string, canRequestChanges: boolean) {
+    const s = await this.access.ownActiveStudent(t, studentId);
+    const token = randomToken(32);
+    const linkId = await this.db.transaction(async (tx) => {
+      const [u] = await tx
+        .insert(appUser)
+        .values({
+          email: `veli-${randomToken(12).toLowerCase()}@misafir.invalid`,
+          passwordHash: '!guest',
+          name: `${s.displayName} velisi`,
+          timezone: t.timezone,
+          isGuest: true,
+          emailVerifiedAt: new Date(),
+        })
+        .returning({ id: appUser.id });
+      const [g] = await tx
+        .insert(guardianLink)
+        .values({ studentId: s.id, workspaceId: t.workspaceId, userId: u!.id, canRequestChanges, accessTokenHash: sha256(token) })
+        .returning({ id: guardianLink.id });
+      return g!.id;
+    });
+    return { linkId, url: `${this.config.APP_URL}/v/${token}` };
   }
 
   /** Öğrencinin aktif grup üyelikleri (profil için). */

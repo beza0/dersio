@@ -2,7 +2,7 @@ import { Navigate, NavLink, Route, Routes } from 'react-router';
 import { useAuth } from './auth';
 import { Shell, items } from './Shell';
 import { Spinner, PageHeader } from './ui';
-import { Login, Register, ForgotPassword, ResetPassword, VerifyEmail } from './pages/auth/AuthPages';
+import { Login, Register, ForgotPassword, ResetPassword, VerifyEmail, GuardianAccess } from './pages/auth/AuthPages';
 import { AcceptInvite } from './pages/auth/AcceptInvite';
 import { NoContext } from './pages/auth/NoContext';
 import { Today } from './pages/teacher/Today';
@@ -53,6 +53,7 @@ export function App() {
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="/invite/:code?" element={<AcceptInvite />} />
+        <Route path="/v/:token" element={<GuardianAccess />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     );
@@ -72,6 +73,7 @@ export function App() {
   return (
     <Routes>
       <Route path="/invite/:code?" element={<AcceptInvite />} />
+      <Route path="/v/:token" element={<GuardianAccess />} />
       {!mode && <Route path="*" element={<NoContext />} />}
       {mode && (
         <Route element={<Shell />}>
