@@ -1,0 +1,36 @@
+# `android-v*` etiketi gönderilince Expo'da derlenmiş APK'yı GitHub Releases'e yükler.
+# Yeni sürümde APK_URL ve APK_SHA256 güncellenir, sonra yeni etiket gönderilir.
+name: Android APK yayını
+
+on:
+  push:
+    tags: ['android-v*']
+
+permissions:
+  contents: write
+
+env:
+  APK_URL: https://expo.dev/artifacts/eas/kzRIDQ_EuUkHXQmJ057kJIvUpXo-Segd1l53AF83toA.apk
+  APK_SHA256: c089fde1caaa70fa28f30724c51c08f71ed16ac79d59f3a224ab1ebe458e5f1c
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: APK'yı indir ve doğrula
+        run: |
+          curl -fsSL -o Dersio.apk "$APK_URL"
+          echo "$APK_SHA256  Dersio.apk" | sha256sum -c -
+      - name: GitHub sürümü oluştur
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cat > notes.md <<'NOTES'
+          ## Android kurulumu
+          1. Aşağıdaki **Dersio.apk** dosyasını Android telefonunuza indirin.
+          2. İnen dosyayı açın.
+          3. "Bilinmeyen kaynak" uyarısı çıkarsa izin verin ve **Yükle**'ye basın.
+
+          iPhone'da APK kurulamaz. Safari'de https://dersio-app.vercel.app adresini açıp **Paylaş → Ana Ekrana Ekle** seçeneğini kullanın.
+          NOTES
+          gh release create "$GITHUB_REF_NAME" Dersio.apk --repo "$GITHUB_REPOSITORY" --title "Dersio Android ${GITHUB_REF_NAME#android-}" --notes-file notes.md --latest

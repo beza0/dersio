@@ -4,6 +4,10 @@ Bağımsız özel ders öğretmenleri için öğrenci, grup, takvim, not, ödev 
 
 > Canlı: **https://dersio-app.vercel.app** · Durum: çalışan ilk sürüm (API + web + Android). Ödeme test modunda; asistan ücretsiz kural tabanlı kipte (Claude API anahtarı girilince tam AI). Ne bittiği ve ne kaldığı: [docs/05-gorev-listesi.md](docs/05-gorev-listesi.md).
 
+## Telefona indir
+- **Android:** [Dersio.apk dosyasını indir](https://github.com/beza0/derslik-app/releases/latest/download/Dersio.apk), dosyayı açıp kurun. "Bilinmeyen kaynak" uyarısı çıkarsa izin verin.
+- **iPhone:** Safari'de [dersio-app.vercel.app](https://dersio-app.vercel.app) adresini açın, **Paylaş → Ana Ekrana Ekle** seçin.
+
 ## Dokümanlar
 - [Ürün gereksinimleri, rol-yetki matrisi, kabul senaryoları](docs/01-urun-gereksinimleri.md)
 - [Karar kaydı, varsayımlar, açık sorular](docs/02-karar-kaydi.md)
