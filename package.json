@@ -2,7 +2,7 @@
   "name": "derslik",
   "private": true,
   "version": "0.1.0",
-  "description": "Özel ders öğretmenleri için öğrenci, takvim, ödev ve AI asistan uygulaması (çalışma adı: Derslik)",
+  "description": "Bağımsız özel ders öğretmenleri için öğrenci, takvim, ödev ve asistan uygulaması (Dersio)",
   "workspaces": [
     "packages/*",
     "apps/*"
